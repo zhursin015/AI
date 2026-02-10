@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satbayev University | AI Library</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --su-blue: #003366; --su-gold: #C5A059; --light-bg: #f4f7f6; --danger: #dc3545; --success: #28a745; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--light-bg); margin: 0; padding: 0; }
+        .navbar { background: var(--su-blue) !important; border-bottom: 3px solid var(--su-gold); }
+        .hero-section { background: linear-gradient(135deg, #002244 0%, #004488 100%); color: white; padding: 60px 0; text-align: center; }
+        .book-card { border: none; border-radius: 15px; background: white; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; position: relative; height: 100%; }
+        .book-card:hover { transform: translateY(-5px); }
+        .card-badge { color: white; font-size: 11px; padding: 4px 12px; border-radius: 50px; position: absolute; top: 15px; right: 15px; font-weight: bold; }
+        .bg-available { background: var(--success); }
+        .bg-reserved { background: var(--danger); }
+        #ai-chat-toggle { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--su-gold); color: white; border: none; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; }
+        #chat-window { position: fixed; bottom: 100px; right: 30px; width: 350px; height: 500px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
+        .chat-header { background: var(--su-blue); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f9f9f9; }
+        .msg { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
+        .msg-user { align-self: flex-end; background: var(--su-blue); color: white; border-bottom-right-radius: 2px; }
+        .msg-ai { align-self: flex-start; background: #e9ecef; color: #333; border-bottom-left-radius: 2px; }
+        .loading-dots { font-style: italic; color: #888; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark p-3">
+    <div class="container">
+        <a class="navbar-brand" href="#"><strong>SATBAYEV</strong> UNIVERSITY</a>
+    </div>
+</nav>
+
+<section class="hero-section">
+    <div class="container">
+        <h1>AI Library Assistant</h1>
+        <p>Кітап туралы сұраңыз немесе брондау жасаңыз</p>
+    </div>
+</section>
+
+<div class="container mt-4">
+    <div class="row">
+        {% for book in books %}
+        <div class="col-md-4 mb-4">
+            <div class="card book-card p-3">
+                <span class="card-badge {% if book.is_available %}bg-available{% else %}bg-reserved{% endif %}">
+                    {% if book.is_available %}Бос{% else %}Алынған{% endif %}
+                </span>
+                <div class="card-body d-flex flex-column">
+                    <h5 class="fw-bold">{{ book.title }}</h5>
+                    <p class="text-muted small">Авторы: {{ book.author }}</p>
+                    <p class="small text-secondary flex-grow-1">{{ book.summary|truncatewords:15 }}</p>
+
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-secondary w-100 mb-2" onclick="sendQuickMsg('«{{ book.title }}» кітабының мазмұны мен кейіпкерлері туралы айтып берші')">
+                            <i class="fas fa-info-circle"></i> Мазмұны
+                        </button>
+                        {% if book.is_available %}
+                        <button class="btn btn-sm btn-primary w-100" onclick="sendQuickMsg('Маған «{{ book.title }}» кітабын брондап берші')">
+                            <i class="fas fa-bookmark"></i> Брондау
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<button id="ai-chat-toggle" onclick="toggleChat()"><i class="fas fa-robot"></i></button>
+
+<div id="chat-window">
+    <div class="chat-header">
+        <span>AI Көмекші</span>
+        <button class="btn btn-sm text-white" onclick="toggleChat()">X</button>
+    </div>
+    <div class="chat-body" id="chat-messages">
+        <div class="msg msg-ai">Сәлем! Мен Gemini-мін. Қай кітаптың мазмұнын білгіңіз келеді? 😊</div>
+    </div>
+    <div class="p-3 border-top">
+        <div class="input-group">
+            <input type="text" id="user-msg" class="form-control" placeholder="Сұрақ жазыңыз..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleChat() {
+        const chat = document.getElementById('chat-window');
+        chat.style.display = (chat.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function sendQuickMsg(text) {
+        if (document.getElementById('chat-window').style.display !== 'flex') toggleChat();
+        document.getElementById('user-msg').value = text;
+        sendMessage();
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('user-msg');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        const chatBody = document.getElementById('chat-messages');
+        chatBody.innerHTML += `<div class="msg msg-user">${msg}</div>`;
+        input.value = '';
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        const loadingId = "load-" + Date.now();
+        chatBody.innerHTML += `<div id="${loadingId}" class="msg msg-ai loading-dots">Ойлануда...</div>`;
+
+        try {
+            const response = await fetch('/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ message: msg })
+            });
+            const data = await response.json();
+            document.getElementById(loadingId).remove();
+            chatBody.innerHTML += `<div class="msg msg-ai">${data.reply}</div>`;
+
+            if (data.reply.includes("✅")) {
+                setTimeout(() => location.reload(), 2000);
+            }
+        } catch (e) {
+            document.getElementById(loadingId).innerText = "❌ Қате орын алды.";
+        }
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+</script>
+</body>
+</html>
