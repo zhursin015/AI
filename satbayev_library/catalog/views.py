@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Book
 
 # Gemini API кілтің
-API_KEY = "AIzaSyCmB9_j5xErvUGGW3DeCIWd-Vivkb969J4"
+API_KEY = "AIzaSyBp_6Pw0tDSm_RSMpMXvsVWj27JiuOO7Hg"
 genai.configure(api_key=API_KEY)
 
 
