@@ -1,3 +1,4 @@
 django
 google-generativeai
 streamlit
+gunicorn
